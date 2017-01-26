@@ -34,6 +34,8 @@ PIG-5067: Revisit union on numeric type and chararray to bytearray (knoguchi)
  
 IMPROVEMENTS
 
+PIG-4963: Add a Bloom join (rohini)
+
 PIG-3938: Add LoadCaster to EvalFunc (knoguchi)
 
 PIG-5105: Tez unit tests failing with "Argument list too long" (rohini)
@@ -186,6 +188,10 @@ PIG-4945: Update document for conflicting macro params (knoguchi via daijy)
 OPTIMIZATIONS
 
 BUG FIXES
+
+PIG-5111: e2e Utf8Test fails in local mode (rohini)
+
+PIG-5112: Cleanup pig-template.xml (daijy)
 
 PIG-5046: Skewed join with auto parallelism hangs when right input also has autoparallelism (rohini)
 
