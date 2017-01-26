@@ -1,0 +1,12 @@
+{
+  "col1": {
+    "col2": {
+      "col1_data": "col1_data"
+    }
+  },
+  "col2": [
+    {
+          "col2_data": "col2_data"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "name" : "recordsWithRedefinedNamedSchemaOutput",
+  "namespace" : "org.apache.pig.test.builtin",
+  "type": "record",
+  "fields": [
+    {
+      "name": "col1",
+      "type": {
+        "type": "record",
+        "name": "col1_1",
+        "fields": [
+          {
+            "name": "col2",
+            "type": {
+              "type": "record",
+              "name": "col1",
+              "fields": [
+                {
+                  "name": "col1_data",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "col2",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "col2",
+          "fields": [
+            {
+              "name": "col2_data",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

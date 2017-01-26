@@ -18,12 +18,17 @@
 package org.apache.pig.impl.util.avro;
 
 import org.apache.avro.Schema;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.pig.ResourceSchema;
+import org.apache.pig.data.DataType;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class TestAvroStorageSchemaConversionUtilities {
     final private static String BASE_DIR = "test/org/apache/pig/builtin/avro/schema/";
@@ -46,5 +51,29 @@ public class TestAvroStorageSchemaConversionUtilities {
         final Schema s = new Schema.Parser().parse(new File(schema));
         final ResourceSchema resourceSchema = AvroStorageSchemaConversionUtilities.avroSchemaToResourceSchema(s, recursive);
         return resourceSchema.toString();
+    }
+
+    @Test
+    public void testRedefinedNamedSchema() throws Exception {
+        List<org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema> fieldSchemas =
+                new ArrayList<>();
+        fieldSchemas.add(new org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema("col1",
+                new org.apache.pig.impl.logicalLayer.schema.Schema(
+                        new org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema("col2",
+                                new org.apache.pig.impl.logicalLayer.schema.Schema(
+                                        new org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema("col1_data", DataType.CHARARRAY)))), DataType.TUPLE));
+        fieldSchemas.add(new org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema("col2",
+                new org.apache.pig.impl.logicalLayer.schema.Schema(
+                        new org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema("col2",
+                                new org.apache.pig.impl.logicalLayer.schema.Schema(
+                                        new org.apache.pig.impl.logicalLayer.schema.Schema.FieldSchema("col2_data", DataType.CHARARRAY)))), DataType.BAG));
+        org.apache.pig.impl.logicalLayer.schema.Schema pigSchema = new org.apache.pig.impl.logicalLayer.schema.Schema(fieldSchemas);
+        Map<String, List<org.apache.avro.Schema>> definedRecordNames = new HashedMap();
+        ResourceSchema resourceSchema = new ResourceSchema(pigSchema);
+        Schema outputSchema = AvroStorageSchemaConversionUtilities.resourceSchemaToAvroSchema(resourceSchema, "data", "", definedRecordNames, false);
+        Assert.assertEquals("{\"type\":\"record\",\"name\":\"TUPLE_0\",\"fields\":[{\"name\":\"col1\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"TUPLE_1\"," +
+                "\"fields\":[{\"name\":\"col2\",\"type\":[\"null\",{\"type\":\"record\",\"name\":\"TUPLE_2\",\"fields\":[{\"name\":\"col1_data\",\"type\":[\"null\",\"string\"]}]}]}]}]}," +
+                "{\"name\":\"col2\",\"type\":[\"null\",{\"type\":\"array\",\"items\":{\"type\":\"record\",\"name\":\"TUPLE_3\"," +
+                "\"fields\":[{\"name\":\"col2_data\",\"type\":[\"null\",\"string\"]}]}}]}]}", outputSchema.toString());
     }
 }

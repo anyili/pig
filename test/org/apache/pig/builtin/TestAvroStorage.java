@@ -114,6 +114,8 @@ public class TestAvroStorage {
         "projectionTestWithSchema",
         "recordsWithSimpleUnion",
         "recordsWithSimpleUnionOutput",
+        "recordWithRedefineNamedSchema",
+        "recordWithRedefineNamedSchemaOutput",
     };
     final private static String[] trevniSchemas = {
         "simpleRecordsTrevni",
@@ -648,6 +650,19 @@ public class TestAvroStorage {
             .build()
            );
       verifyResults(createOutputName(),check);
+    }
+
+    @Test
+    public void testStoreRecordsWithRedefinedNamedSchema() throws Exception {
+        final String input = basedir + "data/avro/uncompressed/recordWithRedefineNamedSchema.avro";
+        final String check = basedir + "data/avro/uncompressed/recordWithRedefineNamedSchemaOutput.avro";
+        testAvroStorage(true, basedir + "code/pig/projection_redefined_namedschema.pig",
+                ImmutableMap.<String,String>builder()
+                        .put("INFILE",input)
+                        .put("OUTFILE",createOutputName())
+                        .build()
+        );
+        verifyResults(createOutputName(),check);
     }
 
     @Test

@@ -46,6 +46,8 @@ import com.google.common.collect.Sets;
  */
 public class AvroStorageSchemaConversionUtilities {
     private static final Log LOG = LogFactory.getLog(AvroStorageSchemaConversionUtilities.class);
+    private static final String TUPLE_NAME = "TUPLE";
+    private static int tupleIndex = 0;
 
   /**
    * Determines the pig object type of the Avro schema.
@@ -316,7 +318,20 @@ public class AvroStorageSchemaConversionUtilities {
 
     return rs;
   }
-  
+
+  /**
+   * The name of named schema can not be redefined in the same namespace,
+   * @see <a href="https://avro.apache.org/docs/1.7.7/spec.html#Names">Names</a>
+   * This method is used to genenerate unique schema name
+   * type
+   * @return the name of named schema
+   */
+  private static String getRecordName() {
+    String name = TUPLE_NAME + "_" + tupleIndex;
+    tupleIndex++;
+    return name;
+  }
+
   /**
    * Translated a ResourceSchema to an Avro Schema.
    * @param rs Input schema.
@@ -340,7 +355,7 @@ public class AvroStorageSchemaConversionUtilities {
 
     List<Schema.Field> fields = new ArrayList<Schema.Field>();
     Schema newSchema = Schema.createRecord(
-        recordName, null, recordNameSpace, false);
+            getRecordName(), null, recordNameSpace, false);
     if (rs.getFields() != null) {
       Integer i = 0;
       for (ResourceSchema.ResourceFieldSchema rfs : rs.getFields()) {
