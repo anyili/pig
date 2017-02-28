@@ -56,16 +56,17 @@ import com.google.common.io.Files;
 public class SchemaTupleFrontend {
     private static final Log LOG = LogFactory.getLog(SchemaTupleFrontend.class);
 
-    private static SchemaTupleFrontend stf;
+    private static ThreadLocal<SchemaTupleFrontend> stf = new ThreadLocal<>();
 
     /**
      * Schemas registered for generation are held here.
      */
-    private static Map<Pair<SchemaKey, Boolean>, Pair<Integer, Set<GenContext>>> schemasToGenerate = Maps.newHashMap();
+    private static ThreadLocal<Map<Pair<SchemaKey, Boolean>, Pair<Integer, Set<GenContext>>>> schemasToGenerate
+            = ThreadLocal.withInitial(Maps::newHashMap);
 
     private int internalRegisterToGenerateIfPossible(Schema udfSchema, boolean isAppendable, GenContext type) {
         Pair<SchemaKey, Boolean> key = Pair.make(new SchemaKey(udfSchema), isAppendable);
-        Pair<Integer, Set<GenContext>> pr = schemasToGenerate.get(key);
+        Pair<Integer, Set<GenContext>> pr = schemasToGenerate.get().get(key);
         if (pr != null) {
             pr.getSecond().add(type);
             return pr.getFirst();
@@ -78,14 +79,14 @@ public class SchemaTupleFrontend {
         Set<GenContext> contexts = Sets.newHashSet();
         contexts.add(GenContext.FORCE_LOAD);
         contexts.add(type);
-        schemasToGenerate.put(key, Pair.make(Integer.valueOf(id), contexts));
+        schemasToGenerate.get().put(key, Pair.make(Integer.valueOf(id), contexts));
         LOG.debug("Registering "+(isAppendable ? "Appendable" : "")+"Schema for generation ["
                 + udfSchema + "] with id [" + id + "] and context: " + type);
         return id;
     }
 
     private Map<Pair<SchemaKey, Boolean>, Pair<Integer, Set<GenContext>>> getSchemasToGenerate() {
-        return schemasToGenerate;
+        return schemasToGenerate.get();
     }
 
     private static class SchemaTupleFrontendGenHelper {
@@ -106,8 +107,6 @@ public class SchemaTupleFrontend {
          * This method copies all class files present in the local temp directory to the distributed cache.
          * All copied files will have a symlink of their name. No files will be copied if the current
          * job is being run from local mode.
-         * @param pigContext
-         * @param conf
          */
         private void internalCopyAllGeneratedToDistributedCache() {
             LOG.info("Starting process to move generated code to distributed cacche");
@@ -115,7 +114,7 @@ public class SchemaTupleFrontend {
                 String codePath = codeDir.getAbsolutePath();
                 LOG.info("Distributed cache not supported or needed in local mode. Setting key ["
                         + LOCAL_CODE_DIR + "] with code temp directory: " + codePath);
-                    conf.set(LOCAL_CODE_DIR, codePath);
+                conf.set(LOCAL_CODE_DIR, codePath);
                 return;
             } else {
                 // This let's us avoid NPE in some of the non-traditional pipelines
@@ -213,8 +212,8 @@ public class SchemaTupleFrontend {
      * JVM (as in testing).
      */
     public static void reset() {
-        stf = null;
-        schemasToGenerate.clear();
+        stf.set(null);
+        schemasToGenerate.get().clear();
     }
 
     /**
@@ -229,7 +228,8 @@ public class SchemaTupleFrontend {
      * @return  identifier
      */
     public static int registerToGenerateIfPossible(Schema udfSchema, boolean isAppendable, GenContext context) {
-        if (stf == null) {
+//        LOG.info("Fixed thread safe version");
+        if (stf.get() == null) {
             if (pigContextToReset != null) {
                 Properties prop = pigContextToReset.getProperties();
                 prop.remove(GENERATED_CLASSES_KEY);
@@ -238,7 +238,7 @@ public class SchemaTupleFrontend {
             }
             SchemaTupleBackend.reset();
             SchemaTupleClassGenerator.resetGlobalClassIdentifier();
-            stf = new SchemaTupleFrontend();
+            stf.set(new SchemaTupleFrontend());
         }
 
         if (udfSchema == null) {
@@ -252,7 +252,7 @@ public class SchemaTupleFrontend {
         }
         stripAliases(udfSchema);
 
-        return stf.internalRegisterToGenerateIfPossible(udfSchema, isAppendable, context);
+        return stf.get().internalRegisterToGenerateIfPossible(udfSchema, isAppendable, context);
     }
 
     private static void stripAliases(Schema s) {
@@ -271,12 +271,12 @@ public class SchemaTupleFrontend {
      * @param conf
      */
     public static void copyAllGeneratedToDistributedCache(PigContext pigContext, Configuration conf) {
-        if (stf == null) {
+        if (stf.get() == null) {
             LOG.debug("Nothing registered to generate.");
             return;
         }
         SchemaTupleFrontendGenHelper stfgh = new SchemaTupleFrontendGenHelper(pigContext, conf);
-        stfgh.generateAll(stf.getSchemasToGenerate());
+        stfgh.generateAll(stf.get().getSchemasToGenerate());
         stfgh.internalCopyAllGeneratedToDistributedCache();
 
         Properties prop = pigContext.getProperties();
