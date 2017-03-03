@@ -228,7 +228,6 @@ public class SchemaTupleFrontend {
      * @return  identifier
      */
     public static int registerToGenerateIfPossible(Schema udfSchema, boolean isAppendable, GenContext context) {
-//        LOG.info("Fixed thread safe version");
         if (stf.get() == null) {
             if (pigContextToReset != null) {
                 Properties prop = pigContextToReset.getProperties();
